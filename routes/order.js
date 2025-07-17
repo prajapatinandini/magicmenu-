@@ -85,6 +85,13 @@ router.get("/cafes/:cafeId/orders", async (req, res) => {
 router.put("/orders/:orderId/status", async (req, res) => {
   const { status } = req.body;
 
+  if (!status) {
+    return res.status(400).json({
+      success: false,
+      message: "Order status is required.",
+    });
+  }
+
   try {
     const order = await Order.findByIdAndUpdate(
       req.params.orderId,
@@ -93,17 +100,68 @@ router.put("/orders/:orderId/status", async (req, res) => {
     ).populate("table customer items.menuItem");
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
     }
 
-    
     req.app.get("io").emit("orderStatusUpdated", order);
 
-    res.json({ success: true, message: "Order status updated", order });
+    res.json({
+      success: true,
+      message: "Order status updated",
+      order,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to update order", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order status",
+      error: err.message,
+    });
   }
 });
+
+
+
+router.put("/orders/:orderId/payment-status", async (req, res) => {
+  const { paymentStatus } = req.body;
+
+  if (!paymentStatus) {
+    return res.status(400).json({
+      success: false,
+      message: "Payment status is required.",
+    });
+  }
+
+  try {
+    const order = await Order.findByIdAndUpdate(
+      req.params.orderId,
+      { paymentStatus },
+      { new: true }
+    ).populate("table customer items.menuItem");
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+    }
+
+    req.app.get("io").emit("paymentStatusUpdated", order);
+
+    res.json({
+      success: true,
+      message: "Payment status updated",
+      order,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to update payment status",
+      error: err.message,
+    });
+  }
+});
+
 
 
 router.get("/orders/today/:cafeId", async (req, res) => {
